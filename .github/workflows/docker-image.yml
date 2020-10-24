@@ -1,0 +1,24 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build the Docker image
+      working-directory: ./FeederBot
+      run: docker build . --file Dockerfile --tag docker.pkg.github.com/tvel/feederbot/feederbot:$(git rev-parse --short HEAD)
+
+    - name: Docker Login
+      run: docker login docker.pkg.github.com -u Tvel --password ${{ secrets.GITHUB_TOKEN }}
+      
+    - name: Push the Docker image
+      working-directory: ./FeederBot
+      run: docker push docker.pkg.github.com/tvel/feederbot/feederbot:$(git rev-parse --short HEAD)
