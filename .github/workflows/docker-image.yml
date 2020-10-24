@@ -14,7 +14,10 @@ jobs:
     - uses: actions/checkout@v2
     - name: Build the Docker image
       working-directory: ./FeederBot
-      run: docker build . --file Dockerfile --tag ghcr.io/tvel/feederbot:$(git rev-parse --short HEAD) --tag ghcr.io/tvel/feederbot:latest
+      run: docker build . --file Dockerfile --tag ghcr.io/tvel/feederbot:$(git rev-parse --short HEAD)
+
+    - name: Docker Tag
+      run: docker tag ghcr.io/tvel/feederbot:$(git rev-parse --short HEAD) ghcr.io/tvel/feederbot:latest
 
     - name: Docker Login
       run: docker login ghcr.io -u Tvel --password ${{ secrets.CR_PAT }}
@@ -22,3 +25,7 @@ jobs:
     - name: Push the Docker image
       working-directory: ./FeederBot
       run: docker push ghcr.io/tvel/feederbot:$(git rev-parse --short HEAD)
+
+    - name: Push the Docker image Latest
+      working-directory: ./FeederBot
+      run: docker push ghcr.io/tvel/feederbot:latest
