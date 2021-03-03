@@ -8,9 +8,10 @@ namespace FeederBot.Jobs
 {
     public class JobSchedulesStorage
     {
-        private readonly ConcurrentDictionary<Job, ScheduleData> jobSchedules = new ConcurrentDictionary<Job, ScheduleData>();
-        private Dictionary<string, DateTime> lastJobRuns = new Dictionary<string, DateTime>();
-        private JobFileStorage jobFileStorage;
+        private readonly ConcurrentDictionary<Job, ScheduleData> jobSchedules = new();
+        private readonly Dictionary<string, DateTime> lastJobRuns;
+        private readonly Dictionary<string, DateTime> lastJobItems;
+        private readonly JobFileStorage jobFileStorage;
         private IDateTimeProvider DateTimeProvider { get; init; }
 
         public JobSchedulesStorage(IDateTimeProvider dateTimeProvider, JobFileStorage jobFileStorage)
@@ -18,6 +19,7 @@ namespace FeederBot.Jobs
             DateTimeProvider = dateTimeProvider;
             this.jobFileStorage = jobFileStorage;
             this.lastJobRuns = jobFileStorage.LastJobRuns;
+            this.lastJobItems = jobFileStorage.LastJobItems;
 
             foreach (var job in jobFileStorage.Jobs)
             {
@@ -30,7 +32,7 @@ namespace FeederBot.Jobs
 
         public IEnumerable<Job> Jobs => jobSchedules.Keys;
 
-        public DateTime GetNextOccurance(Job job)
+        public DateTime GetNextOccurrence(Job job)
         {
             var data = jobSchedules.GetOrAdd(job, new ScheduleData(CrontabSchedule.Parse(job.Cron), default));
 
@@ -56,6 +58,19 @@ namespace FeederBot.Jobs
         public DateTime GetLastRun(Job job)
         {
             return lastJobRuns.ContainsKey(job.Data) ? lastJobRuns[job.Data] : DateTimeProvider.Now().Date;
+        }
+        
+        public Task SaveLastItem(Job job, DateTime dateTime)
+        {
+            lastJobItems[job.Data] = dateTime;
+            jobFileStorage.UpdateLastItem(job.Data, dateTime);
+
+            return Task.CompletedTask;
+        }
+
+        public DateTime GetLastItem(Job job)
+        {
+            return lastJobItems.ContainsKey(job.Data) ? lastJobItems[job.Data] : DateTimeProvider.Now().Date;
         }
     }
 }

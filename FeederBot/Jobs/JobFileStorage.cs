@@ -7,38 +7,47 @@ namespace FeederBot.Jobs
 {
     public class JobFileStorage
     {
-        private string path = Environment.GetEnvironmentVariable("JobsDb") ?? "jobs.json";
-        private JsonSerializerOptions options = new JsonSerializerOptions() { WriteIndented = true };
-        private SavedStroage SavedStroage { get; } = new SavedStroage();
+        private readonly string path = Environment.GetEnvironmentVariable("JobsDb") ?? "jobs.json";
+        private readonly JsonSerializerOptions options = new JsonSerializerOptions() { WriteIndented = true };
+        private SavedStorage SavedStorage { get; } = new SavedStorage();
 
         public JobFileStorage()
         {
             if (File.Exists(path))
             {
                 string json = File.ReadAllText(path);
-                SavedStroage = JsonSerializer.Deserialize<SavedStroage>(json)!;
+                SavedStorage = JsonSerializer.Deserialize<SavedStorage>(json)!;
             }
         }
 
-        public IEnumerable<Job> Jobs => SavedStroage.Jobs;
-        public Dictionary<string, DateTime> LastJobRuns => SavedStroage.LastJobRuns;
-
+        public IEnumerable<Job> Jobs => SavedStorage.Jobs;
+        public Dictionary<string, DateTime> LastJobRuns => SavedStorage.LastJobRuns;
+        public Dictionary<string, DateTime> LastJobItems => SavedStorage.LastJobItems;
+        
         public void UpdateLastRun(string Data, DateTime lastRun)
         {
             LastJobRuns[Data] = lastRun;
-            File.WriteAllText(path, JsonSerializer.Serialize(SavedStroage, options));
+            File.WriteAllText(path, JsonSerializer.Serialize(SavedStorage, options));
+        }
+        
+        public void UpdateLastItem(string Data, DateTime lastItem)
+        {
+            LastJobItems[Data] = lastItem;
+            File.WriteAllText(path, JsonSerializer.Serialize(SavedStorage, options));
         }
     }
 
-    public class SavedStroage
+    public class SavedStorage
     {
-        public IEnumerable<Job> Jobs { get; set; }
-        public Dictionary<string, DateTime> LastJobRuns { get; set; }
-
-        public SavedStroage()
+        public IEnumerable<Job> Jobs { get; }
+        public Dictionary<string, DateTime> LastJobRuns { get; }
+        public Dictionary<string, DateTime> LastJobItems { get; }
+        
+        public SavedStorage()
         {
             Jobs = Array.Empty<Job>();
             LastJobRuns = new Dictionary<string, DateTime>();
+            LastJobItems = new Dictionary<string, DateTime>();
         }
     }
 }

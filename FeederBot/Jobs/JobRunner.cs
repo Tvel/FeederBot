@@ -9,8 +9,8 @@ namespace FeederBot.Jobs
 {
     public class JobRunner
     {
-        private int delay = int.Parse(Environment.GetEnvironmentVariable("Tick") ?? "1000");
-        private SingleChannelDiscordSender messageSender;
+        private readonly int delay = int.Parse(Environment.GetEnvironmentVariable("Tick") ?? "1000");
+        private readonly SingleChannelDiscordSender messageSender;
         public JobRunner(JobSchedulesStorage jobSchedulesStorage, ILogger<JobRunner> logger, IDateTimeProvider dateTimeProvider, SingleChannelDiscordSender messageSender)
         {
             JobSchedulesStorage = jobSchedulesStorage;
@@ -34,15 +34,13 @@ namespace FeederBot.Jobs
                         if (cancellationToken.IsCancellationRequested) throw new TaskCanceledException();
 
                         foreach (var job in JobSchedulesStorage.Jobs) { 
-                            DateTime next = JobSchedulesStorage.GetNextOccurance(job);
+                            DateTime next = JobSchedulesStorage.GetNextOccurrence(job);
                             Logger.LogDebug($"Try Job[{job}]: {next:O}: Go? : {DateTimeProvider.Past(next)}");
                             if (DateTimeProvider.Past(next))
                             {
                                 await ReadFeeds(job);
-                                await JobSchedulesStorage.SaveLastRun(job, DateTimeProvider.Now());
                             }
                         }
-
                         await Task.Delay(delay, cancellationToken);
                     }
                     catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
@@ -57,14 +55,24 @@ namespace FeederBot.Jobs
         private async Task ReadFeeds(Job job)
         {
             var feed = await FeedReader.ReadAsync(job.Data);
-            var lastRun = JobSchedulesStorage.GetLastRun(job);
+            
+            DateTime lastItem = JobSchedulesStorage.GetLastItem(job);
 
+            DateTime lastPubDate = lastItem;
             foreach (var item in feed.Items)
             {
-                if (item.PublishingDate <= lastRun) break;
+                if (item.PublishingDate <= lastItem) break;
 
                 await messageSender.Send(item.Link);
+                
+                if (item.PublishingDate > lastPubDate)
+                {
+                    lastPubDate = item.PublishingDate ?? lastItem;
+                }
             }
+            
+            await JobSchedulesStorage.SaveLastRun(job, DateTimeProvider.Now());
+            await JobSchedulesStorage.SaveLastItem(job, lastPubDate);
         }
     }
 }
