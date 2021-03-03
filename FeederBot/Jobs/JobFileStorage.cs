@@ -39,9 +39,9 @@ namespace FeederBot.Jobs
 
     public class SavedStorage
     {
-        public IEnumerable<Job> Jobs { get; }
-        public Dictionary<string, DateTime> LastJobRuns { get; }
-        public Dictionary<string, DateTime> LastJobItems { get; }
+        public IEnumerable<Job> Jobs { get; set; }
+        public Dictionary<string, DateTime> LastJobRuns { get; set; }
+        public Dictionary<string, DateTime> LastJobItems { get; set; }
         
         public SavedStorage()
         {
