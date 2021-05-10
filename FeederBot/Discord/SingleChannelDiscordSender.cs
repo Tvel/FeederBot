@@ -68,7 +68,7 @@ namespace FeederBot.Discord
                 }
                 catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
                 {
-                    logger.LogDebug($"Cancelled, closing");
+                    logger.LogInformation($"Cancelled, closing");
                     return;
                 }
             }
