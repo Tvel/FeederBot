@@ -1,55 +1,54 @@
 ﻿using CodeHollow.FeedReader;
-using FeederBot.Discord;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
 
 namespace FeederBot.Jobs
 {
-    public class JobRunner
+    public class JobRunner : BackgroundService
     {
         private readonly int delay = int.Parse(Environment.GetEnvironmentVariable("Tick") ?? "1000");
-        private readonly SingleChannelDiscordSender messageSender;
-        public JobRunner(JobSchedulesStorage jobSchedulesStorage, ILogger<JobRunner> logger, IDateTimeProvider dateTimeProvider, SingleChannelDiscordSender messageSender)
+        private readonly IMessageReceiver messageReceiver;
+        public JobRunner(JobSchedulesStorage jobSchedulesStorage, ILogger<JobRunner> logger, IDateTimeProvider dateTimeProvider, IMessageReceiver messageReceiver)
         {
             JobSchedulesStorage = jobSchedulesStorage;
             Logger = logger;
             DateTimeProvider = dateTimeProvider;
-            this.messageSender = messageSender;
+            this.messageReceiver = messageReceiver;
         }
 
         public JobSchedulesStorage JobSchedulesStorage { get; }
         public ILogger<JobRunner> Logger { get; }
         public IDateTimeProvider DateTimeProvider { get; }
-
-        public async Task Run(CancellationToken cancellationToken = default)
+        
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            await Task.Run(async () =>
-            {
-                while (true)
-                {
-                    try
-                    {
-                        if (cancellationToken.IsCancellationRequested) throw new TaskCanceledException();
+            Logger.LogInformation($"Feeder started");
 
-                        foreach (var job in JobSchedulesStorage.Jobs) { 
-                            DateTime next = JobSchedulesStorage.GetNextOccurrence(job);
-                            Logger.LogDebug($"Try Job[{job}]: {next:O}: Go? : {DateTimeProvider.Past(next)}");
-                            if (DateTimeProvider.Past(next))
-                            {
-                                await ReadFeeds(job);
-                            }
+            while (true)
+            {
+                try
+                {
+                    if (stoppingToken.IsCancellationRequested) throw new TaskCanceledException();
+
+                    foreach (var job in JobSchedulesStorage.Jobs) { 
+                        DateTime next = JobSchedulesStorage.GetNextOccurrence(job);
+                        Logger.LogDebug($"Try Job[{job}]: {next:O}: Go? : {DateTimeProvider.Past(next)}");
+                        if (DateTimeProvider.Past(next))
+                        {
+                            await ReadFeeds(job);
                         }
-                        await Task.Delay(delay, cancellationToken);
                     }
-                    catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
-                    {
-                        Logger.LogDebug($"Cancelled, closing");
-                        return;
-                    }
+                    await Task.Delay(delay, stoppingToken);
                 }
-            });
+                catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
+                {
+                    Logger.LogDebug($"Cancelled, closing");
+                    return;
+                }
+            }
         }
 
         private async Task ReadFeeds(Job job)
@@ -63,7 +62,7 @@ namespace FeederBot.Jobs
             {
                 if (item.PublishingDate <= lastItem) break;
 
-                await messageSender.Send(item.Link);
+                await messageReceiver.Send(item.Link);
                 
                 if (item.PublishingDate > lastPubDate)
                 {

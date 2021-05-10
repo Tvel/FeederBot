@@ -1,10 +1,10 @@
-﻿using Discord.WebSocket;
+﻿using System;
+using Discord.WebSocket;
 using FeederBot.Discord;
 using FeederBot.Jobs;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Configuration;
 
 namespace FeederBot
 {
@@ -34,9 +34,12 @@ namespace FeederBot
             services.AddSingleton<JobFileStorage>();
             services.AddSingleton<JobSchedulesStorage>();
             services.AddSingleton<JobRunner>();
+            services.AddHostedService(static s => s.GetService<JobRunner>());
 
             services.AddSingleton<DiscordSocketClient>();
             services.AddSingleton<SingleChannelDiscordSender>();
+            services.AddSingleton<IMessageReceiver>(static s => s.GetService<SingleChannelDiscordSender>() ?? throw new NullReferenceException("Invalid Receiver"));
+            services.AddHostedService(static s => s.GetService<SingleChannelDiscordSender>());
         }
     }
 }

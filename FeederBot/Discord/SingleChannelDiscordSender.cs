@@ -6,9 +6,13 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
+using FeederBot.Jobs;
+
+using Microsoft.Extensions.Hosting;
+
 namespace FeederBot.Discord
 {
-    public class SingleChannelDiscordSender
+    public class SingleChannelDiscordSender : BackgroundService, IMessageReceiver
     {
         private Channel<string> channel;
         private DiscordSocketClient discordSocketClient;
@@ -28,8 +32,8 @@ namespace FeederBot.Discord
         {
             return channel.Writer.WriteAsync(msg);
         }
-
-        public async Task Start(CancellationToken cancellationToken = default)
+        
+        public override async Task StartAsync(CancellationToken cancellationToken)
         {
             await discordSocketClient.LoginAsync(TokenType.Bot, Environment.GetEnvironmentVariable("DiscordToken"));
             await discordSocketClient.StartAsync();
@@ -38,34 +42,38 @@ namespace FeederBot.Discord
             Task DiscordConnected()
             {
                 logged = true;
+                logger.LogInformation($"Discord Logged in");
+
                 return Task.CompletedTask;
             }
+            
+            await base.StartAsync(cancellationToken);
+        }
 
-            _ = Task.Run(async () =>
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            while (true)
             {
-                while (true)
+                try
                 {
-                    try
-                    {
-                        while (logged == false) await Task.Delay(1000, cancellationToken);
+                    while (logged == false) await Task.Delay(1000, stoppingToken);
 
-                        var msg = await channel.Reader.ReadAsync(cancellationToken);
+                    var msg = await channel.Reader.ReadAsync(stoppingToken);
 
-                        if (cancellationToken.IsCancellationRequested) throw new TaskCanceledException();
+                    if (stoppingToken.IsCancellationRequested) throw new TaskCanceledException();
 
-                        var dguild = discordSocketClient.GetGuild(guildId);
-                        var dchannel = dguild.GetTextChannel(channelId);
-                        await dchannel.SendMessageAsync(msg);
+                    var dguild = discordSocketClient.GetGuild(guildId);
+                    var dchannel = dguild.GetTextChannel(channelId);
+                    await dchannel.SendMessageAsync(msg);
 
-                        logger.LogDebug($"msg recieved: {msg}");
-                    }
-                    catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
-                    {
-                        logger.LogDebug($"Cancelled, closing");
-                        return;
-                    }
+                    logger.LogDebug($"msg recieved: {msg}");
                 }
-            });
+                catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
+                {
+                    logger.LogDebug($"Cancelled, closing");
+                    return;
+                }
+            }
         }
     }
 }
