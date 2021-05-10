@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace FeederBot
+namespace FeederBot.System
 {
     public interface IDateTimeProvider
     {

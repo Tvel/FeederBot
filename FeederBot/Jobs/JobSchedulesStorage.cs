@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using FeederBot.System;
 
 namespace FeederBot.Jobs
 {
@@ -11,12 +12,13 @@ namespace FeederBot.Jobs
         private readonly ConcurrentDictionary<Job, ScheduleData> jobSchedules = new();
         private readonly Dictionary<string, DateTime> lastJobRuns;
         private readonly Dictionary<string, DateTime> lastJobItems;
+        
         private readonly JobFileStorage jobFileStorage;
-        private IDateTimeProvider DateTimeProvider { get; init; }
+        private readonly IDateTimeProvider dateTimeProvider;
 
         public JobSchedulesStorage(IDateTimeProvider dateTimeProvider, JobFileStorage jobFileStorage)
         {
-            DateTimeProvider = dateTimeProvider;
+            this.dateTimeProvider = dateTimeProvider;
             this.jobFileStorage = jobFileStorage;
             this.lastJobRuns = jobFileStorage.LastJobRuns;
             this.lastJobItems = jobFileStorage.LastJobItems;
@@ -40,9 +42,9 @@ namespace FeederBot.Jobs
                 j =>
                 {
                     var cron = CrontabSchedule.Parse(j.Cron);
-                    return new ScheduleData(cron, cron.GetNextOccurrence(DateTimeProvider.Now()));
+                    return new ScheduleData(cron, cron.GetNextOccurrence(dateTimeProvider.Now()));
                 },
-                (j, ls) => new ScheduleData(ls.Cron, ls.Cron.GetNextOccurrence(DateTimeProvider.Now())));
+                (j, ls) => new ScheduleData(ls.Cron, ls.Cron.GetNextOccurrence(dateTimeProvider.Now())));
 
             return data.Next;
         }
@@ -57,7 +59,7 @@ namespace FeederBot.Jobs
 
         public DateTime GetLastRun(Job job)
         {
-            return lastJobRuns.ContainsKey(job.Data) ? lastJobRuns[job.Data] : DateTimeProvider.Now().Date;
+            return lastJobRuns.ContainsKey(job.Data) ? lastJobRuns[job.Data] : dateTimeProvider.Now().Date;
         }
         
         public Task SaveLastItem(Job job, DateTime dateTime)
@@ -70,7 +72,7 @@ namespace FeederBot.Jobs
 
         public DateTime GetLastItem(Job job)
         {
-            return lastJobItems.ContainsKey(job.Data) ? lastJobItems[job.Data] : DateTimeProvider.Now().Date;
+            return lastJobItems.ContainsKey(job.Data) ? lastJobItems[job.Data] : dateTimeProvider.Now().Date;
         }
     }
 }

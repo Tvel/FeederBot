@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using FeederBot.System;
 using Microsoft.Extensions.Hosting;
 
 namespace FeederBot.Jobs
@@ -11,21 +12,20 @@ namespace FeederBot.Jobs
     {
         private readonly int delay = int.Parse(Environment.GetEnvironmentVariable("Tick") ?? "1000");
         private readonly IMessageReceiver messageReceiver;
+        private readonly JobSchedulesStorage jobSchedulesStorage;
+        private readonly ILogger<JobRunner> logger;
+        private readonly IDateTimeProvider dateTimeProvider;
+
         public JobRunner(JobSchedulesStorage jobSchedulesStorage, ILogger<JobRunner> logger, IDateTimeProvider dateTimeProvider, IMessageReceiver messageReceiver)
         {
-            JobSchedulesStorage = jobSchedulesStorage;
-            Logger = logger;
-            DateTimeProvider = dateTimeProvider;
+            this.jobSchedulesStorage = jobSchedulesStorage;
+            this.logger = logger;
+            this.dateTimeProvider = dateTimeProvider;
             this.messageReceiver = messageReceiver;
         }
-
-        public JobSchedulesStorage JobSchedulesStorage { get; }
-        public ILogger<JobRunner> Logger { get; }
-        public IDateTimeProvider DateTimeProvider { get; }
-        
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            Logger.LogInformation($"Feeder started");
+            logger.LogInformation($"Feeder started");
 
             while (true)
             {
@@ -33,10 +33,10 @@ namespace FeederBot.Jobs
                 {
                     if (stoppingToken.IsCancellationRequested) throw new TaskCanceledException();
 
-                    foreach (var job in JobSchedulesStorage.Jobs) { 
-                        DateTime next = JobSchedulesStorage.GetNextOccurrence(job);
-                        Logger.LogDebug($"Try Job[{job}]: {next:O}: Go? : {DateTimeProvider.Past(next)}");
-                        if (DateTimeProvider.Past(next))
+                    foreach (var job in jobSchedulesStorage.Jobs) { 
+                        DateTime next = jobSchedulesStorage.GetNextOccurrence(job);
+                        logger.LogDebug($"Try Job[{job}]: {next:O}: Go? : {dateTimeProvider.Past(next)}");
+                        if (dateTimeProvider.Past(next))
                         {
                             await ReadFeeds(job);
                         }
@@ -45,7 +45,7 @@ namespace FeederBot.Jobs
                 }
                 catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
                 {
-                    Logger.LogDebug($"Cancelled, closing");
+                    logger.LogDebug($"Cancelled, closing");
                     return;
                 }
             }
@@ -55,7 +55,7 @@ namespace FeederBot.Jobs
         {
             var feed = await FeedReader.ReadAsync(job.Data);
             
-            DateTime lastItem = JobSchedulesStorage.GetLastItem(job);
+            DateTime lastItem = jobSchedulesStorage.GetLastItem(job);
 
             DateTime lastPubDate = lastItem;
             foreach (var item in feed.Items)
@@ -70,8 +70,8 @@ namespace FeederBot.Jobs
                 }
             }
             
-            await JobSchedulesStorage.SaveLastRun(job, DateTimeProvider.Now());
-            await JobSchedulesStorage.SaveLastItem(job, lastPubDate);
+            await jobSchedulesStorage.SaveLastRun(job, dateTimeProvider.Now());
+            await jobSchedulesStorage.SaveLastItem(job, lastPubDate);
         }
     }
 }

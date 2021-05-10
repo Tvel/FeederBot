@@ -1,14 +1,12 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 using System;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-
 using FeederBot.Jobs;
-
-using Microsoft.Extensions.Hosting;
 
 namespace FeederBot.Discord
 {
