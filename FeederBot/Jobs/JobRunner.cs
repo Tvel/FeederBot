@@ -5,23 +5,25 @@ using System.Threading;
 using System.Threading.Tasks;
 using FeederBot.System;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace FeederBot.Jobs
 {
     public class JobRunner : BackgroundService
     {
-        private readonly int delay = int.Parse(Environment.GetEnvironmentVariable("Tick") ?? "1000");
+        private readonly int delay;
         private readonly IMessageReceiver messageReceiver;
         private readonly JobSchedulesStorage jobSchedulesStorage;
         private readonly ILogger<JobRunner> logger;
         private readonly IDateTimeProvider dateTimeProvider;
 
-        public JobRunner(JobSchedulesStorage jobSchedulesStorage, ILogger<JobRunner> logger, IDateTimeProvider dateTimeProvider, IMessageReceiver messageReceiver)
+        public JobRunner(JobSchedulesStorage jobSchedulesStorage, ILogger<JobRunner> logger, IDateTimeProvider dateTimeProvider, IMessageReceiver messageReceiver, IOptions<FeederSettings> feederSettings)
         {
             this.jobSchedulesStorage = jobSchedulesStorage;
             this.logger = logger;
             this.dateTimeProvider = dateTimeProvider;
             this.messageReceiver = messageReceiver;
+            delay = int.Parse(feederSettings.Value.Tick);
         }
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {

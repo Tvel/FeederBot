@@ -7,23 +7,29 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using FeederBot.Jobs;
+using Microsoft.Extensions.Options;
 
 namespace FeederBot.Discord
 {
     public class SingleChannelDiscordSender : BackgroundService, IMessageReceiver
     {
-        private Channel<string> channel;
-        private DiscordSocketClient discordSocketClient;
-        ILogger<SingleChannelDiscordSender> logger;
-        bool logged;
-        ulong channelId = ulong.Parse(Environment.GetEnvironmentVariable("ChannelId")!);
-        ulong guildId = ulong.Parse(Environment.GetEnvironmentVariable("GuildId")!);
+        private readonly Channel<string> channel;
+        private readonly DiscordSocketClient discordSocketClient;
+        private readonly IOptions<DiscordSettings> discordSettings;
+        private readonly ILogger<SingleChannelDiscordSender> logger;
+        private bool logged;
+        private readonly ulong channelId;
+        private readonly ulong guildId;
 
-        public SingleChannelDiscordSender(DiscordSocketClient discordSocketClient, ILogger<SingleChannelDiscordSender> logger)
+        public SingleChannelDiscordSender(DiscordSocketClient discordSocketClient, IOptions<DiscordSettings> discordSettings, ILogger<SingleChannelDiscordSender> logger)
         {
             this.channel = Channel.CreateBounded<string>(100);
             this.discordSocketClient = discordSocketClient;
+            this.discordSettings = discordSettings;
             this.logger = logger;
+
+            channelId = ulong.Parse(discordSettings.Value.ChannelId);
+            guildId = ulong.Parse(discordSettings.Value.GuildId);
         }
 
         public ValueTask Send(string msg)
@@ -33,7 +39,7 @@ namespace FeederBot.Discord
         
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
-            await discordSocketClient.LoginAsync(TokenType.Bot, Environment.GetEnvironmentVariable("DiscordToken"));
+            await discordSocketClient.LoginAsync(TokenType.Bot, discordSettings.Value.DiscordToken);
             await discordSocketClient.StartAsync();
             discordSocketClient.Ready += DiscordConnected;
 

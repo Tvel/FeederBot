@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using FeederBot.Jobs.Storage;
 using FeederBot.System;
 
 namespace FeederBot.Jobs
@@ -13,27 +14,33 @@ namespace FeederBot.Jobs
         private readonly Dictionary<string, DateTime> lastJobRuns;
         private readonly Dictionary<string, DateTime> lastJobItems;
         
-        private readonly JobFileStorage jobFileStorage;
+        private readonly IJobStorage jobStorage;
         private readonly IDateTimeProvider dateTimeProvider;
 
-        public JobSchedulesStorage(IDateTimeProvider dateTimeProvider, JobFileStorage jobFileStorage)
+        public JobSchedulesStorage(IDateTimeProvider dateTimeProvider, IJobStorage jobStorage)
         {
             this.dateTimeProvider = dateTimeProvider;
-            this.jobFileStorage = jobFileStorage;
-            this.lastJobRuns = jobFileStorage.LastJobRuns;
-            this.lastJobItems = jobFileStorage.LastJobItems;
+            this.jobStorage = jobStorage;
+            this.lastJobRuns = jobStorage.LastJobRuns;
+            this.lastJobItems = jobStorage.LastJobItems;
 
-            foreach (var job in jobFileStorage.Jobs)
-            {
-                jobSchedules.GetOrAdd(job, new ScheduleData(
-                        CrontabSchedule.Parse(job.Cron),
-                        jobFileStorage.LastJobRuns.ContainsKey(job.Data) ? jobFileStorage.LastJobRuns[job.Data] : default)
-                    );
-            }
+            Refresh();
         }
 
         public IEnumerable<Job> Jobs => jobSchedules.Keys;
 
+        public void Refresh()
+        {
+            jobSchedules.Clear();
+            foreach (var job in jobStorage.Jobs)
+            {
+                jobSchedules.GetOrAdd(job, new ScheduleData(
+                    CrontabSchedule.Parse(job.Cron),
+                    jobStorage.LastJobRuns.ContainsKey(job.Data) ? jobStorage.LastJobRuns[job.Data] : default)
+                );
+            }
+        }
+        
         public DateTime GetNextOccurrence(Job job)
         {
             var data = jobSchedules.GetOrAdd(job, new ScheduleData(CrontabSchedule.Parse(job.Cron), default));
@@ -49,12 +56,10 @@ namespace FeederBot.Jobs
             return data.Next;
         }
 
-        public Task SaveLastRun(Job job, DateTime dateTime)
+        public async Task SaveLastRun(Job job, DateTime dateTime)
         {
             lastJobRuns[job.Data] = dateTime;
-            jobFileStorage.UpdateLastRun(job.Data, dateTime);
-
-            return Task.CompletedTask;
+            await jobStorage.UpdateLastRun(job.Data, dateTime);
         }
 
         public DateTime GetLastRun(Job job)
@@ -62,12 +67,10 @@ namespace FeederBot.Jobs
             return lastJobRuns.ContainsKey(job.Data) ? lastJobRuns[job.Data] : dateTimeProvider.Now().Date;
         }
         
-        public Task SaveLastItem(Job job, DateTime dateTime)
+        public async Task SaveLastItem(Job job, DateTime dateTime)
         {
             lastJobItems[job.Data] = dateTime;
-            jobFileStorage.UpdateLastItem(job.Data, dateTime);
-
-            return Task.CompletedTask;
+            await jobStorage.UpdateLastItem(job.Data, dateTime);
         }
 
         public DateTime GetLastItem(Job job)
