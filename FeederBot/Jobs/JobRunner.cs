@@ -62,6 +62,15 @@ namespace FeederBot.Jobs
             DateTime lastPubDate = lastItem;
             foreach (var item in feed.Items)
             {
+                if (item.PublishingDate is null)
+                {
+                    if (item.PublishingDateString.EndsWith(" UTC"))
+                    {
+                        DateTime.TryParse(item.PublishingDateString.Replace(" UTC", " GMT"), out var pubdate);
+                        item.PublishingDate = pubdate;
+                    }
+                }
+                
                 if (item.PublishingDate <= lastItem) break;
 
                 await messageReceiver.Send(item.Link);
