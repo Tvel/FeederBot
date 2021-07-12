@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using FeederBot.System;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Polly;
+using Polly.Timeout;
 
 namespace FeederBot.Jobs
 {
@@ -55,7 +57,17 @@ namespace FeederBot.Jobs
 
         private async Task ReadFeeds(Job job)
         {
-            var feed = await FeedReader.ReadAsync(job.Data);
+            Feed? feed;
+            try
+            {
+                feed = await Policy.TimeoutAsync(30)
+                           .ExecuteAsync(async () => await FeedReader.ReadAsync(job.Data));
+            }
+            catch (TimeoutRejectedException e)
+            {
+                logger.LogInformation($"Timeout for {job.Data}, skipping");
+                return;
+            }
             
             DateTime lastItem = jobSchedulesStorage.GetLastItem(job);
 
