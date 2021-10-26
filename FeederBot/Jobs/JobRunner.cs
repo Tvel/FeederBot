@@ -9,92 +9,92 @@ using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Timeout;
 
-namespace FeederBot.Jobs
+namespace FeederBot.Jobs;
+
+public class JobRunner : BackgroundService
 {
-    public class JobRunner : BackgroundService
+    private readonly int delay;
+    private readonly IMessageReceiver messageReceiver;
+    private readonly JobSchedulesStorage jobSchedulesStorage;
+    private readonly ILogger<JobRunner> logger;
+    private readonly IDateTimeProvider dateTimeProvider;
+
+    public JobRunner(JobSchedulesStorage jobSchedulesStorage, ILogger<JobRunner> logger, IDateTimeProvider dateTimeProvider, IMessageReceiver messageReceiver, IOptions<FeederSettings> feederSettings)
     {
-        private readonly int delay;
-        private readonly IMessageReceiver messageReceiver;
-        private readonly JobSchedulesStorage jobSchedulesStorage;
-        private readonly ILogger<JobRunner> logger;
-        private readonly IDateTimeProvider dateTimeProvider;
+        this.jobSchedulesStorage = jobSchedulesStorage;
+        this.logger = logger;
+        this.dateTimeProvider = dateTimeProvider;
+        this.messageReceiver = messageReceiver;
+        delay = int.Parse(feederSettings.Value.Tick);
+    }
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        logger.LogInformation($"Feeder started");
 
-        public JobRunner(JobSchedulesStorage jobSchedulesStorage, ILogger<JobRunner> logger, IDateTimeProvider dateTimeProvider, IMessageReceiver messageReceiver, IOptions<FeederSettings> feederSettings)
+        PeriodicTimer timer = new(TimeSpan.FromMilliseconds(delay));
+        try
         {
-            this.jobSchedulesStorage = jobSchedulesStorage;
-            this.logger = logger;
-            this.dateTimeProvider = dateTimeProvider;
-            this.messageReceiver = messageReceiver;
-            delay = int.Parse(feederSettings.Value.Tick);
-        }
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            logger.LogInformation($"Feeder started");
-
-            while (true)
+            while (await timer.WaitForNextTickAsync(stoppingToken))
             {
-                try
+                if (stoppingToken.IsCancellationRequested) throw new TaskCanceledException();
+
+                foreach (var job in jobSchedulesStorage.Jobs)
                 {
-                    if (stoppingToken.IsCancellationRequested) throw new TaskCanceledException();
-
-                    foreach (var job in jobSchedulesStorage.Jobs) { 
-                        DateTime next = jobSchedulesStorage.GetNextOccurrence(job);
-                        logger.LogDebug($"Try Job[{job}]: {next:O}: Go? : {dateTimeProvider.Past(next)}");
-                        if (dateTimeProvider.Past(next))
-                        {
-                            await ReadFeeds(job);
-                        }
-                    }
-                    await Task.Delay(delay, stoppingToken);
-                }
-                catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
-                {
-                    logger.LogInformation($"Cancelled, closing");
-                    return;
-                }
-            }
-        }
-
-        private async Task ReadFeeds(Job job)
-        {
-            Feed? feed;
-            try
-            {
-                feed = await Policy.TimeoutAsync(30)
-                           .ExecuteAsync(async () => await FeedReader.ReadAsync(job.Data));
-            }
-            catch (TimeoutRejectedException e)
-            {
-                logger.LogInformation($"Timeout for {job.Data}, skipping");
-                return;
-            }
-            
-            DateTime lastItem = jobSchedulesStorage.GetLastItem(job);
-
-            DateTime lastPubDate = lastItem;
-            foreach (var item in feed.Items)
-            {
-                if (item.PublishingDate is null)
-                {
-                    if (item.PublishingDateString.EndsWith(" UTC"))
+                    DateTime next = jobSchedulesStorage.GetNextOccurrence(job);
+                    logger.LogDebug($"Try Job[{job}]: {next:O}: Go? : {dateTimeProvider.Past(next)}");
+                    if (dateTimeProvider.Past(next))
                     {
-                        DateTime.TryParse(item.PublishingDateString.Replace(" UTC", " GMT"), out var pubdate);
-                        item.PublishingDate = pubdate;
+                        await ReadFeeds(job);
                     }
                 }
-                
-                if (item.PublishingDate <= lastItem) break;
+            }
+        }
+        catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
+        {
+            logger.LogInformation($"Cancelled, closing");
+            return;
+        }
+    }
 
-                await messageReceiver.Send(item.Link);
-                
-                if (item.PublishingDate > lastPubDate)
+    private async Task ReadFeeds(Job job)
+    {
+        Feed? feed;
+        try
+        {
+            feed = await Policy.TimeoutAsync(30)
+                       .ExecuteAsync(async () => await FeedReader.ReadAsync(job.Data));
+        }
+        catch (TimeoutRejectedException e)
+        {
+            logger.LogInformation($"Timeout for {job.Data}, skipping");
+            return;
+        }
+
+        DateTime lastItem = jobSchedulesStorage.GetLastItem(job);
+
+        DateTime lastPubDate = lastItem;
+        foreach (var item in feed.Items)
+        {
+            if (item.PublishingDate is null)
+            {
+                if (item.PublishingDateString.EndsWith(" UTC"))
                 {
-                    lastPubDate = item.PublishingDate ?? lastItem;
+                    DateTime.TryParse(item.PublishingDateString.Replace(" UTC", " GMT"), out var pubdate);
+                    item.PublishingDate = pubdate;
                 }
             }
-            
-            await jobSchedulesStorage.SaveLastRun(job, dateTimeProvider.Now());
-            await jobSchedulesStorage.SaveLastItem(job, lastPubDate);
+
+            if (item.PublishingDate <= lastItem) break;
+
+            await messageReceiver.Send(item.Link);
+
+            if (item.PublishingDate > lastPubDate)
+            {
+                lastPubDate = item.PublishingDate ?? lastItem;
+            }
         }
+
+        await jobSchedulesStorage.SaveLastRun(job, dateTimeProvider.Now());
+        await jobSchedulesStorage.SaveLastItem(job, lastPubDate);
     }
 }
