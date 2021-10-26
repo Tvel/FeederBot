@@ -1,9 +1,8 @@
 using System.Threading.Tasks;
 
-namespace FeederBot.Jobs
+namespace FeederBot.Jobs;
+
+public interface IMessageReceiver
 {
-    public interface IMessageReceiver
-    {
-        public ValueTask Send(string msg);
-    }
+    public ValueTask Send(string msg);
 }

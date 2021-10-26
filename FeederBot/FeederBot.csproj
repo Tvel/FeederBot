@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net5</TargetFramework>
+    <TargetFramework>net6</TargetFramework>
     <Nullable>enable</Nullable>
     <!--<PublishReadyToRun>true</PublishReadyToRun>-->
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
@@ -19,25 +19,25 @@
 <!--  </ItemGroup>-->
 
   <ItemGroup>
-    <PackageReference Include="CodeHollow.FeedReader" Version="1.2.1" />
+    <PackageReference Include="CodeHollow.FeedReader" Version="1.2.2" />
     <PackageReference Include="Discord.Net" Version="2.4.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="5.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="5.0.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="5.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="6.0.0-rc.2.21480.5" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0-rc.2.21480.5" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0-rc.2.21480.5" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.0-rc.2.21480.5" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="6.0.0-rc.2.21480.5" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="6.0.0-rc.2.21480.5" />
     <PackageReference Include="ncrontab" Version="3.3.1" />
     <PackageReference Include="Dapper" Version="2.0.90" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="5.0.6" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="6.0.0-rc.2.21480.5" />
     <PackageReference Include="Polly" Version="7.2.2" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.1.4" />
-    <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="6.1.4" />
-    <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.0.1" />
-    <PackageReference Include="OpenTelemetry.Exporter.Jaeger" Version="1.0.1" />
-    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.0.0-rc4" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.0.0-rc4" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.0.0-rc4" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="6.2.3" />
+    <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.2.0-beta1" />
+    <PackageReference Include="OpenTelemetry.Exporter.Jaeger" Version="1.2.0-beta1" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.0.0-rc8" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.0.0-rc8" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.0.0-rc8" />
   </ItemGroup>
 
 </Project>

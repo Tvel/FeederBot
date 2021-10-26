@@ -5,33 +5,32 @@ using FeederBot.Jobs.Storage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FeederBot.Controllers
-{
-    [Authorize]
-    [ApiController]
-    [Route("/api/[controller]")]
-    public class List : Controller
-    {
-        private readonly IJobApiStorage jobApiStorage;
+namespace FeederBot.Controllers;
 
-        public List(IJobApiStorage jobApiStorage)
+[Authorize]
+[ApiController]
+[Route("/api/[controller]")]
+public class List : Controller
+{
+    private readonly IJobApiStorage jobApiStorage;
+
+    public List(IJobApiStorage jobApiStorage)
+    {
+        this.jobApiStorage = jobApiStorage;
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<JobListModel>>> Get()
+    {
+        try
         {
-            this.jobApiStorage = jobApiStorage;
+            IEnumerable<JobListModel> jobs = await jobApiStorage.GetAll();
+            return Ok(jobs);
         }
-        
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<JobListModel>>> Get()
+        catch (Exception e)
         {
-            try
-            {
-                IEnumerable<JobListModel> jobs = await jobApiStorage.GetAll();
-                return Ok(jobs);
-            }
-            catch (Exception e)
-            {
-                ModelState.AddModelError("Job", e.Message);
-                return ValidationProblem();
-            }
+            ModelState.AddModelError("Job", e.Message);
+            return ValidationProblem();
         }
     }
 }
