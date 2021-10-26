@@ -1,15 +1,14 @@
 ﻿using System;
 
-namespace FeederBot.System
-{
-    public interface IDateTimeProvider
-    {
-        public DateTime Now();
-        public bool Past(DateTime d) => d < Now();
-    }
+namespace FeederBot.System;
 
-    public class DateTimeProvider : IDateTimeProvider
-    {
-        public DateTime Now() => DateTime.Now;
-    }
+public interface IDateTimeProvider
+{
+    public DateTime Now();
+    public bool Past(DateTime d) => d < Now();
+}
+
+public class DateTimeProvider : IDateTimeProvider
+{
+    public DateTime Now() => DateTime.Now;
 }

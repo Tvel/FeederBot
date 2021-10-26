@@ -1,26 +1,25 @@
 using System.ComponentModel.DataAnnotations;
 using NCrontab;
 
-namespace FeederBot.Controllers.Helpers
+namespace FeederBot.Controllers.Helpers;
+
+public class CronAttribute : ValidationAttribute
 {
-    public class CronAttribute : ValidationAttribute
+    public string GetErrorMessage(string value) =>
+        $"Invalid Cron \"{value}\"";
+
+    protected override ValidationResult IsValid(object? value,
+                                                ValidationContext validationContext)
     {
-        public string GetErrorMessage(string value) =>
-            $"Invalid Cron \"{value}\"";
+        var cronString = (string)(value ?? string.Empty);
 
-        protected override ValidationResult IsValid(object? value,
-                                                    ValidationContext validationContext)
+        var result = CrontabSchedule.TryParse(cronString);
+
+        if (result is null)
         {
-            var cronString = (string) (value ?? string.Empty);
-
-            var result = CrontabSchedule.TryParse(cronString);
-            
-            if(result is null)
-            {
-                return new ValidationResult(GetErrorMessage(cronString));
-            }
-
-            return ValidationResult.Success!;
+            return new ValidationResult(GetErrorMessage(cronString));
         }
+
+        return ValidationResult.Success!;
     }
 }
