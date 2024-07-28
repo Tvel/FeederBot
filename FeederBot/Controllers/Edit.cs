@@ -38,6 +38,11 @@ public class Edit : Controller
             return ValidationProblem();
         }
 
+        if (job.Enabled == false)
+        {
+            await jobApiStorage.ClearLastItem(id);
+        }
+        
         jobSchedulesStorage.Refresh();
 
         return Ok();

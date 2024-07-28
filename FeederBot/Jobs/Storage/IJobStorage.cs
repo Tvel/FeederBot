@@ -21,6 +21,7 @@ public interface IJobApiStorage
     Task Add(JobAddModel jobAddModel);
     Task Edit(string id, JobEditModel jobAddModel);
     Task Delete(string id);
+    Task ClearLastItem(string id);
 }
 
 public class JobAddModel

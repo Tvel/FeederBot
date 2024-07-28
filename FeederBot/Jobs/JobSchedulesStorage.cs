@@ -12,7 +12,7 @@ public class JobSchedulesStorage
 {
     private readonly ConcurrentDictionary<Job, ScheduleData> jobSchedules = new();
     private readonly Dictionary<string, DateTime> lastJobRuns;
-    private readonly Dictionary<string, DateTime> lastJobItems;
+    private Dictionary<string, DateTime> lastJobItems = new();
 
     private readonly IJobStorage jobStorage;
     private readonly IDateTimeProvider dateTimeProvider;
@@ -22,7 +22,6 @@ public class JobSchedulesStorage
         this.dateTimeProvider = dateTimeProvider;
         this.jobStorage = jobStorage;
         this.lastJobRuns = jobStorage.LastJobRuns;
-        this.lastJobItems = jobStorage.LastJobItems;
 
         Refresh();
     }
@@ -39,6 +38,7 @@ public class JobSchedulesStorage
                 jobStorage.LastJobRuns.ContainsKey(job.Data) ? jobStorage.LastJobRuns[job.Data] : default)
             );
         }
+        lastJobItems = jobStorage.LastJobItems;
     }
 
     public DateTime GetNextOccurrence(Job job)
@@ -75,6 +75,8 @@ public class JobSchedulesStorage
 
     public DateTime GetLastItem(Job job)
     {
-        return lastJobItems.ContainsKey(job.Data) ? lastJobItems[job.Data] : dateTimeProvider.Now().Date;
+        lastJobItems.TryGetValue(job.Data, out var item);
+        
+        return item == default ? dateTimeProvider.Now().Date : item;
     }
 }

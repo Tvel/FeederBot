@@ -129,6 +129,16 @@ public class JobDatabaseStorage : IJobStorage, IJobApiStorage
             Id = id,
         });
     }
+
+    public async Task ClearLastItem(string id)
+    {        
+        await using var connection = new SqliteConnection(databaseConfig.Value.ConnectionString);
+        
+        await connection.ExecuteAsync(@"Delete from LastJobItems where JobId = @Id", new
+        {
+            Id = id
+        });
+    }
 }
 
 class JobQueryResult
