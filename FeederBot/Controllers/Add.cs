@@ -34,7 +34,8 @@ public class Add : Controller
                 UserId = job.UserId,
                 Name = job.Name,
                 Cron = job.Cron,
-                Data = job.Data
+                Data = job.Data,
+                Enabled = job.Enabled
             });
         }
         catch (Exception e)
@@ -64,5 +65,7 @@ public class Add : Controller
 
         [Url]
         public string Data { get; set; } = null!;
+        
+        public bool Enabled { get; set; }
     }
 }

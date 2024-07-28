@@ -30,7 +30,7 @@ public class Edit : Controller
         try
         {
             await jobApiStorage.Edit(id,
-                new JobEditModel() { UserId = job.UserId, Name = job.Name, Cron = job.Cron, Data = job.Data });
+                new JobEditModel() { UserId = job.UserId, Name = job.Name, Cron = job.Cron, Data = job.Data, Enabled = job.Enabled});
         }
         catch (Exception e)
         {
@@ -56,5 +56,7 @@ public class Edit : Controller
 
         [Url]
         public string Data { get; set; } = null!;
+        
+        public bool Enabled { get; set; }
     }
 }

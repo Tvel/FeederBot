@@ -67,6 +67,7 @@ public class JobDatabaseStorage : IJobStorage, IJobApiStorage
                     SELECT Cron, Data, li.LastTime, lr.RunTime FROM Jobs
                         LEFT JOIN LastJobItems li on li.JobId = Jobs.Id
                         LEFT JOIN LastJobRuns lr on lr.JobId = Jobs.Id
+                        WHERE Jobs.Enabled = 1
                      ;");
 
         return queryModels.ToList();
@@ -77,7 +78,7 @@ public class JobDatabaseStorage : IJobStorage, IJobApiStorage
         using var connection = new SqliteConnection(databaseConfig.Value.ConnectionString);
 
         IEnumerable<JobListModel> queryModels = await connection.QueryAsync<JobListModel>(@"
-                    SELECT Id, UserId, Name, Cron, Data, li.LastTime, lr.RunTime FROM Jobs
+                    SELECT Id, UserId, Name, Cron, Data, li.LastTime, lr.RunTime, Enabled FROM Jobs
                         LEFT JOIN LastJobItems li on li.JobId = Jobs.Id
                         LEFT JOIN LastJobRuns lr on lr.JobId = Jobs.Id
                      ;");
@@ -89,14 +90,15 @@ public class JobDatabaseStorage : IJobStorage, IJobApiStorage
     {
         await using var connection = new SqliteConnection(databaseConfig.Value.ConnectionString);
 
-        await connection.ExecuteAsync(@"INSERT INTO Jobs (Id, UserId, Name, Cron, Data, UploadedTime) VALUES (@Id, @UserId, @Name, @Cron, @Data, @UploadedTime)", new
+        await connection.ExecuteAsync(@"INSERT INTO Jobs (Id, UserId, Name, Cron, Data, UploadedTime, Enabled) VALUES (@Id, @UserId, @Name, @Cron, @Data, @UploadedTime, @Enabled)", new
         {
             Id = jobAddModel.Id,
             UserId = jobAddModel.UserId,
             Name = jobAddModel.Name,
             Cron = jobAddModel.Cron,
             Data = jobAddModel.Data,
-            UploadedTime = DateTime.Now
+            UploadedTime = DateTime.Now,
+            Enabled = jobAddModel.Enabled
         });
     }
 
@@ -105,7 +107,7 @@ public class JobDatabaseStorage : IJobStorage, IJobApiStorage
         await using var connection = new SqliteConnection(databaseConfig.Value.ConnectionString);
 
         await connection.ExecuteAsync(@"UPDATE Jobs 
-                                                    SET UserId = @UserId, Name = @Name, Cron = @Cron, Data = @Data, UploadedTime = @UploadedTime 
+                                                    SET UserId = @UserId, Name = @Name, Cron = @Cron, Data = @Data, UploadedTime = @UploadedTime, Enabled = @Enabled
                                                 WHERE Id = @Id", new
         {
             Id = id,
@@ -113,7 +115,8 @@ public class JobDatabaseStorage : IJobStorage, IJobApiStorage
             Name = jobAddModel.Name,
             Cron = jobAddModel.Cron,
             Data = jobAddModel.Data,
-            UploadedTime = DateTime.Now
+            UploadedTime = DateTime.Now,
+            Enabled = jobAddModel.Enabled
         });
     }
 
