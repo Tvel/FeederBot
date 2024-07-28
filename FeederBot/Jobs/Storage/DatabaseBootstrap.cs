@@ -42,7 +42,8 @@ public class DatabaseBootstrap : IDatabaseBootstrap
                                "Cron VARCHAR(256) NOT NULL," +
                                "Data VARCHAR(1000) NOT NULL," +
                                "UploadedTime DATETIME NOT NULL," +
-                               "Description VARCHAR(1000) NULL)" +
+                               "Description VARCHAR(1000) NULL," +
+                               "Enabled INTEGER(0) NOT NULL)" +
                                ";");
         }
         AddJobs();
@@ -84,5 +85,17 @@ public class DatabaseBootstrap : IDatabaseBootstrap
 
         }
         AddLastJobItems();
+
+
+        void AddEnabledColumn()
+        {
+            var table = connection.Query<string>("SELECT name FROM sqlite_master WHERE type='table' AND name = 'Jobs' AND sql like '%Enabled%';");
+            var tableName = table.FirstOrDefault();
+
+            if (!string.IsNullOrEmpty(tableName) && tableName == "Jobs") return;
+            
+            connection.Execute("alter table Jobs add Enabled integer(0) default 1 not null;");
+        }
+        AddEnabledColumn();
     }
 }
