@@ -36,28 +36,21 @@ public class Startup
         });
         services.Configure<LoggerFilterOptions>(options => options.MinLevel = LogLevel.Debug);
 
-        string jaegerHost = this.Configuration["Jaeger:Host"];
-        int.TryParse(this.Configuration["Jaeger:Port"], out int jaegerPort);
-
-        if (jaegerHost != null)
+        string? oltpEndpoint = Configuration["OTLP:Endpoint"];
+        if (oltpEndpoint != null)
         {
-            services.AddOpenTelemetryTracing(
-                (builder) => builder
+            services.AddOpenTelemetry()
+                .WithTracing((providerBuilder) => providerBuilder
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     //.AddSource("")
                     .SetResourceBuilder(
                         ResourceBuilder.CreateDefault().AddService(
                             $"FeederBot:{this.Configuration["ASPNETCORE_ENVIRONMENT"]}"))
-                    .AddJaegerExporter(
-                        options =>
-                            {
-                                options.AgentHost = jaegerHost;
-                                if (jaegerPort != 0)
-                                {
-                                    options.AgentPort = jaegerPort;
-                                }
-                            }));
+                    .AddOtlpExporter(options =>
+                    {
+                        options.Endpoint = new Uri(oltpEndpoint);
+                    }));
         }
 
         services.Configure<DatabaseConfig>(Configuration.GetSection("SQLite"));
